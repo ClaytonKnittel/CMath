@@ -1,4 +1,5 @@
 CC=gcc
+CPPC=g++
 AR=ar
 
 BASE_DIR=$(shell pwd)
@@ -11,10 +12,12 @@ IFLAGS=-I$(BASE_DIR)/include
 DEBUG=1
 
 ifeq ($(DEBUG), 0)
-CFLAGS=-O3 -Wall -Wno-unused-function -MMD -MP
+CFLAGS=-O3 -Wall -Wno-unused-function -MMD -MP -mavx -DCL_SILENCE_DEPRECATION
+CPPFLAGS=-O3 -Wall -Wno-unused-function -MMD -MP -mavx -DCL_SILENCE_DEPRECATION
 else
-CFLAGS=-O0 -Wall -Wno-unused-function -MMD -MP -g3 -DDEBUG
+CFLAGS=-O0 -Wall -Wno-unused-function -MMD -MP -mavx -g3 -DDEBUG -DCL_SILENCE_DEPRECATION
+CPPFLAGS=-O0 -Wall -Wno-unused-function -MMD -MP -mavx -g3 -DDEBUG -DCL_SILENCE_DEPRECATION
 endif
 
-LDFLAGS=-flto -L$(LIB_DIR)
+LDFLAGS=-flto -L$(LIB_DIR) -framework OpenCL
 
