@@ -1,3 +1,4 @@
 bin
 *.[od]
 lib
+*.swp

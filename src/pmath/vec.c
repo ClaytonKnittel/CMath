@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <pmath/cl.h>
 #include <pmath/util.h>
 #include <pmath/vec.h>
 
@@ -21,6 +22,9 @@ void _vec_add(double * dst, double * restrict v1, double * restrict v2,
         size_t len) {
 }
 
+void _load_vec_add() {
+
+}
 
 
 /*
@@ -31,6 +35,7 @@ static void _fvec_add_base_rem(float * dst, float * restrict v1,
 
     MATH_ASSERT(len < PS_PER_REG);
 
+#if 0
     switch (len) {
         case 7:
             dst[6] = v1[6] + v2[6];
@@ -48,6 +53,54 @@ static void _fvec_add_base_rem(float * dst, float * restrict v1,
             dst[0] = v1[0] + v2[0];
         case 0:;
     }
+#else
+    switch (len) {
+        case 0:
+            break;
+        case 1:
+            dst[0] = v1[0] + v2[0];
+            break;
+        case 2:
+            dst[0] = v1[0] + v2[0];
+            dst[1] = v1[1] + v2[1];
+            break;
+        case 3:
+            dst[0] = v1[0] + v2[0];
+            dst[1] = v1[1] + v2[1];
+            dst[2] = v1[2] + v2[2];
+            break;
+        case 4:
+            dst[0] = v1[0] + v2[0];
+            dst[1] = v1[1] + v2[1];
+            dst[2] = v1[2] + v2[2];
+            dst[3] = v1[3] + v2[3];
+            break;
+        case 5:
+            dst[0] = v1[0] + v2[0];
+            dst[1] = v1[1] + v2[1];
+            dst[2] = v1[2] + v2[2];
+            dst[3] = v1[3] + v2[3];
+            dst[4] = v1[4] + v2[4];
+            break;
+        case 6:
+            dst[0] = v1[0] + v2[0];
+            dst[1] = v1[1] + v2[1];
+            dst[2] = v1[2] + v2[2];
+            dst[3] = v1[3] + v2[3];
+            dst[4] = v1[4] + v2[4];
+            dst[5] = v1[5] + v2[5];
+            break;
+        case 7:
+            dst[0] = v1[0] + v2[0];
+            dst[1] = v1[1] + v2[1];
+            dst[2] = v1[2] + v2[2];
+            dst[3] = v1[3] + v2[3];
+            dst[4] = v1[4] + v2[4];
+            dst[5] = v1[5] + v2[5];
+            dst[6] = v1[6] + v2[6];
+            break;
+    }
+#endif
 }
 
 
@@ -85,5 +138,11 @@ void _fvec_add(float * dst, float * restrict v1, float * restrict v2,
     }
 
     abort();
+}
+
+
+
+void _load_fvec_add() {
+    cl_load_op(fvec_add, "kernels/fvec_add", "fvec_add");
 }
 
