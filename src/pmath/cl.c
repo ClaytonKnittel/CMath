@@ -178,10 +178,6 @@ static int _cl_init(struct __int_cl_context * c) {
     err = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU, num_devices,
             device_list, NULL);
 
-    for (int i = 0; i < num_devices; i++) {
-        print_device_info(device_list[i]);
-    }
-
     // Create one OpenCL context for each device in the platform
     cl_context context;
     cl_context_properties props[3] = {
@@ -229,6 +225,10 @@ static int _cl_init(struct __int_cl_context * c) {
     c->flags = INITIALIZED;
     __builtin_memset(c->ops, 0, n_operations * sizeof(struct __int_op));
 
+    for (int i = 0; i < num_devices; i++) {
+        print_device_info(device_list[i]);
+    }
+
     return 0;
 }
 
@@ -257,6 +257,13 @@ int __int_cl_load_op(operation_t op_idx, const char * program_name,
         op->prog = clCreateProgramWithSource(ctxt->context, 1, &program_name,
                 NULL, &err);
 
+        if (err) {
+            fprintf(stderr, "Error loading program \"%s\"\n", program_name);
+            return err;
+        }
+
+        err = clBuildProgram(op->prog, 1, ctxt->device_list, NULL, NULL, NULL);
+
         if (err != CL_SUCCESS) {
             char buf[4096];
             size_t len;
@@ -283,5 +290,17 @@ int __int_cl_load_op(operation_t op_idx, const char * program_name,
 
     // if op was already initialized, don't need to do anything
     return 0;
+}
+
+
+void cl_set_param(operation_t op_idx, uint32_t param_idx, size_t arg_size,
+        const void * arg) {
+    struct __int_cl_context * global_context;
+    struct __int_op * op;
+
+    global_context = __cl_get_global_context();
+    op = &global_context->ops[op_idx];
+
+    clSetKernelArg(op->kernel, param_idx, arg_size, arg);
 }
 

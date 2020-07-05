@@ -1,6 +1,9 @@
 #ifndef _CL_H
 #define _CL_H
 
+#include <stddef.h>
+#include <stdint.h>
+
 
 // list of all operations
 typedef enum operation {
@@ -39,6 +42,18 @@ static __attribute__((always_inline)) int cl_load_op(operation_t op,
     global_context = __cl_get_global_context();
 
     return __int_cl_load_op(op, program_name, kernel_name, global_context);
+}
+
+
+/*
+ * alias for clSetKernelArg
+ */
+void cl_set_param(operation_t op, uint32_t param_idx, size_t arg_size,
+        const void * arg);
+
+
+static int cl_execute_op() {
+    return 0;
 }
 
 

@@ -143,6 +143,6 @@ void _fvec_add(float * dst, float * restrict v1, float * restrict v2,
 
 
 void _load_fvec_add() {
-    cl_load_op(fvec_add, "kernels/fvec_add", "fvec_add");
+    cl_load_op(fvec_add, "kernels/fvec_add.cl", "fvec_add");
 }
 
