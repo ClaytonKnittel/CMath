@@ -65,6 +65,9 @@ static void print_device_info(cl_device_id id) {
     cl_ulong cache_size;
     cl_ulong glob_mem_size;
 
+    cl_device_local_mem_type loc_mem;
+    cl_ulong loc_mem_size;
+
     cl_bool endian;
 
     cl_device_exec_capabilities exec_cap;
@@ -126,6 +129,20 @@ static void print_device_info(cl_device_id id) {
     }
     clGetDeviceInfo(id, CL_DEVICE_GLOBAL_MEM_SIZE, 128, &glob_mem_size, NULL);
     printf("\tglobal memory: %llu\n", glob_mem_size);
+
+    clGetDeviceInfo(id, CL_DEVICE_LOCAL_MEM_TYPE, 128, &loc_mem, NULL);
+    clGetDeviceInfo(id, CL_DEVICE_LOCAL_MEM_SIZE, 128, &loc_mem_size, NULL);
+
+    printf("\tlocal memory: ");
+    if (loc_mem == CL_LOCAL) {
+        printf("local, size %llu\n", loc_mem_size);
+    }
+    else if (loc_mem == CL_GLOBAL) {
+        printf("global, size %llu\n", loc_mem_size);
+    }
+    else {
+        printf("none\n");
+    }
 
     clGetDeviceInfo(id, CL_DEVICE_ENDIAN_LITTLE, 128, &endian, NULL);
     if (endian) {
@@ -293,6 +310,57 @@ int __int_cl_load_op(operation_t op_idx, const char * program_name,
 }
 
 
+cl_mem cl_create_buffer(int flags, size_t n_bytes, void * ptr) {
+    struct __int_cl_context * global_context;
+    cl_int err;
+
+    global_context = __cl_get_global_context();
+
+    cl_mem mem = clCreateBuffer(global_context->context, flags, n_bytes,
+            ptr, &err);
+
+    if (err != CL_SUCCESS) {
+        const char * perms;
+        if (flags & CL_MEM_READ_ONLY) {
+            if (flags & CL_MEM_WRITE_ONLY) {
+                perms = "read/write";
+            }
+            else {
+                perms = "read";
+            }
+        }
+        else if (flags & CL_MEM_WRITE_ONLY) {
+            perms = "write";
+        }
+        fprintf(stderr, "Unable to create %s buffer of size %lu\n",
+                perms, n_bytes);
+        return NULL;
+    }
+
+    return mem;
+}
+
+void cl_read_buffer(cl_mem cl_buf, size_t offset, size_t n_bytes, void * dst) {
+    struct __int_cl_context * global_context;
+    cl_int err;
+    cl_event event;
+
+    global_context = __cl_get_global_context();
+
+    err = clEnqueueReadBuffer(global_context->command_queue,
+            cl_buf,
+            // true for blocking read
+            CL_TRUE,
+            offset, n_bytes, dst,
+            0, NULL,
+            &event);
+}
+
+void cl_delete_buffer(cl_mem buf) {
+    clReleaseMemObject(buf);
+}
+
+
 void cl_set_param(operation_t op_idx, uint32_t param_idx, size_t arg_size,
         const void * arg) {
     struct __int_cl_context * global_context;
@@ -303,4 +371,77 @@ void cl_set_param(operation_t op_idx, uint32_t param_idx, size_t arg_size,
 
     clSetKernelArg(op->kernel, param_idx, arg_size, arg);
 }
+
+
+int cl_execute_op(operation_t op_idx, size_t global_size) {
+    struct __int_cl_context * global_context;
+    struct __int_op * op;
+    cl_int err;
+    cl_event event;
+
+    global_context = __cl_get_global_context();
+    op = &global_context->ops[op_idx];
+
+    err = clEnqueueNDRangeKernel(global_context->command_queue, op->kernel,
+            1, NULL, &global_size, NULL,
+            0, NULL,
+            &event);
+
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "failed to enqueue kernel: ");
+        switch (err) {
+            case CL_INVALID_PROGRAM_EXECUTABLE:
+                fprintf(stderr, "no executable has been built in the program object for the device associated with the command queue\n");
+                break;
+            case CL_INVALID_COMMAND_QUEUE:
+                fprintf(stderr, "the command queue is not valid\n");
+                break;
+            case CL_INVALID_KERNEL:
+                fprintf(stderr, "the kernel object is not valid\n");
+                break;
+            case CL_INVALID_CONTEXT:
+                fprintf(stderr, "the command queue and kernel are not associated with the same context\n");
+                break;
+            case CL_INVALID_KERNEL_ARGS:
+                fprintf(stderr, "kernel arguments have not been set\n");
+                break;
+            case CL_INVALID_WORK_DIMENSION:
+                fprintf(stderr, "the dimension is not between 1 and 3\n");
+                break;
+            case CL_INVALID_GLOBAL_WORK_SIZE:
+                fprintf(stderr, "the global work size is NULL or exceeds the range supported by the compute device\n");
+                break;
+            case CL_INVALID_WORK_GROUP_SIZE:
+                fprintf(stderr, "the local work size is not evenly divisible with the global work size or the value specified exceeds "
+                        "the range supported by the compute device\n");
+                break;
+            case CL_INVALID_WORK_ITEM_SIZE:
+                fprintf(stderr, "the number of work-items specified in any of local_work_size[0], ... local_work_size[work_dim - 1] "
+                        "is greater than the corresponding values specified by CL_DEVICE_MAX_WORK_ITEM_SIZES[0], ..., "
+                        "CL_DEVICE_MAX_WORK_ITEM_SIZES[work_dim - 1]\n");
+                break;
+            case CL_INVALID_GLOBAL_OFFSET:
+                fprintf(stderr, "the reserved global offset parameter is not set to NULL");
+                break;
+            case CL_INVALID_EVENT_WAIT_LIST:
+                fprintf(stderr, "the events list is empty (NULL) but the number of events is greater than 0; or number of events is 0 "
+                        "but the event list is not NULL; or the events list contains invalid event objects\n");
+                break;
+            case CL_OUT_OF_HOST_MEMORY:
+                fprintf(stderr, "the host is unable to allocate OpenCL resources\n");
+                break;
+            case CL_OUT_OF_RESOURCES:
+                fprintf(stderr, "insufficient resources to execute the kernel\n");
+                break;
+            case CL_MEM_OBJECT_ALLOCATION_FAILURE:
+                fprintf(stderr, "there was a failure to allocate memory for data store associated with image or buffer objects "
+                        "specified as arguments to the kernel\n");
+                break;
+        }
+        return err;
+    }
+
+    return 0;
+}
+
 

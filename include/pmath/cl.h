@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <OpenCL/opencl.h>
+
 
 // list of all operations
 typedef enum operation {
@@ -46,15 +48,31 @@ static __attribute__((always_inline)) int cl_load_op(operation_t op,
 
 
 /*
+ * alias for clCreateBuffer
+ */
+cl_mem cl_create_buffer(int flags, size_t n_bytes, void * ptr);
+
+/*
+ * read memory from cl buffer into dst, blocks until prerequisite operations
+ * have been complete and the memory transfer is finished
+ */
+void cl_read_buffer(cl_mem cl_buf, size_t offset, size_t n_bytes, void * dst);
+
+/*
+ * alias for clReleaseMemObject
+ */
+void cl_delete_buffer(cl_mem buf);
+
+
+
+/*
  * alias for clSetKernelArg
  */
 void cl_set_param(operation_t op, uint32_t param_idx, size_t arg_size,
         const void * arg);
 
 
-static int cl_execute_op() {
-    return 0;
-}
+int cl_execute_op(operation_t op, size_t global_size);
 
 
 #endif /* _CL_H */

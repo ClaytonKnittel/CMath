@@ -194,15 +194,15 @@ int test() {
     // Create a command queue
     cl_command_queue command_queue = clCreateCommandQueue(context, device_list[0], 0, &clStatus);
 
-    // Create memory buffers on the device for each vector
-    cl_mem A_clmem = clCreateBuffer(context, CL_MEM_READ_ONLY,  SIZE * sizeof(float), NULL, &clStatus);
-    cl_mem B_clmem = clCreateBuffer(context, CL_MEM_READ_ONLY,  SIZE * sizeof(float), NULL, &clStatus);
-    cl_mem C_clmem = clCreateBuffer(context, CL_MEM_WRITE_ONLY, SIZE * sizeof(float), NULL, &clStatus);
-
     float alpha = 2.f;
     float * a = (float*) malloc(SIZE * sizeof(float));
     float * b = (float*) malloc(SIZE * sizeof(float));
     float * c = (float*) malloc(SIZE * sizeof(float));
+
+    // Create memory buffers on the device for each vector
+    cl_mem A_clmem = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,  SIZE * sizeof(float), a, &clStatus);
+    cl_mem B_clmem = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,  SIZE * sizeof(float), b, &clStatus);
+    cl_mem C_clmem = clCreateBuffer(context, CL_MEM_WRITE_ONLY, SIZE * sizeof(float), NULL, &clStatus);
 
     for (int i = 0; i < SIZE; i++) {
         a[i] = fmod(i, 127.f);
@@ -210,8 +210,8 @@ int test() {
     }
 
     // Copy the Buffer A and B to the device
-    clStatus = clEnqueueWriteBuffer(command_queue, A_clmem, CL_TRUE, 0, SIZE * sizeof(float), a, 0, NULL, NULL);
-    clStatus = clEnqueueWriteBuffer(command_queue, B_clmem, CL_TRUE, 0, SIZE * sizeof(float), b, 0, NULL, NULL);
+    //clStatus = clEnqueueWriteBuffer(command_queue, A_clmem, CL_TRUE, 0, SIZE * sizeof(float), a, 0, NULL, NULL);
+    //clStatus = clEnqueueWriteBuffer(command_queue, B_clmem, CL_TRUE, 0, SIZE * sizeof(float), b, 0, NULL, NULL);
 
     // Create a program from the kernel source
     cl_program program = clCreateProgramWithSource(context, 1,(const char **)&saxpy_kernel, NULL, &clStatus);
