@@ -9,6 +9,7 @@
 
 // list of all operations
 typedef enum operation {
+    vec_add,
     fvec_add,
     n_operations
 } operation_t;
@@ -26,7 +27,8 @@ struct __int_cl_context * __cl_get_global_context();
 
 
 int __int_cl_load_op(operation_t op, const char * program_name,
-        const char * kernel_name, struct __int_cl_context * ctxt);
+        const char * kernel_name, const char * opts,
+        struct __int_cl_context * ctxt);
 
 
 /*
@@ -38,12 +40,14 @@ int __int_cl_load_op(operation_t op, const char * program_name,
  * objects for the op
  */
 static __attribute__((always_inline)) int cl_load_op(operation_t op,
-        const char * program_name, const char * kernel_name) {
+        const char * program_name, const char * kernel_name,
+        const char * opts) {
     struct __int_cl_context * global_context;
 
     global_context = __cl_get_global_context();
 
-    return __int_cl_load_op(op, program_name, kernel_name, global_context);
+    return __int_cl_load_op(op, program_name, kernel_name, opts,
+            global_context);
 }
 
 
@@ -73,6 +77,9 @@ void cl_set_param(operation_t op, uint32_t param_idx, size_t arg_size,
 
 
 int cl_execute_op(operation_t op, size_t global_size);
+
+
+void cl_finish();
 
 
 #endif /* _CL_H */

@@ -9,10 +9,12 @@ struct timer {
 };
 
 #define start_timing(ts) \
+    __asm__ __volatile__("":::"memory"); \
     clock_gettime(CLOCK_MONOTONIC, &(ts)->start)
 
 #define end_timing(ts) \
-    clock_gettime(CLOCK_MONOTONIC, &(ts)->end)
+    clock_gettime(CLOCK_MONOTONIC, &(ts)->end); \
+    __asm__ __volatile__("":::"memory")
 
 
 

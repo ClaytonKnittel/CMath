@@ -72,6 +72,8 @@ static void print_device_info(cl_device_id id) {
 
     cl_device_exec_capabilities exec_cap;
 
+    cl_device_fp_config sp, dp;
+
     char builtin_kernels[128];
 
     clGetDeviceInfo(id, CL_DEVICE_NAME, 128, name, NULL);
@@ -164,6 +166,59 @@ static void print_device_info(cl_device_id id) {
 
     clGetDeviceInfo(id, CL_DEVICE_BUILT_IN_KERNELS, 128, &builtin_kernels, NULL);
     printf("\tbuiltin kernels: %s\n", builtin_kernels);
+
+
+    clGetDeviceInfo(id, CL_DEVICE_SINGLE_FP_CONFIG, sizeof(sp), &sp, NULL);
+    printf("\tsingle precision capabilities:\n");
+    if (sp & CL_FP_DENORM) {
+        printf("\t\tdenormalized\n");
+    }
+    if (sp & CL_FP_INF_NAN) {
+        printf("\t\tINF and quiet NaNs\n");
+    }
+    if (sp & CL_FP_ROUND_TO_NEAREST) {
+        printf("\t\tround to nearest even\n");
+    }
+    if (sp & CL_FP_ROUND_TO_ZERO) {
+        printf("\t\tround to zero\n");
+    }
+    if (sp & CL_FP_ROUND_TO_INF) {
+        printf("\t\tround to infinity\n");
+    }
+    if (sp & CL_FP_FMA) {
+        printf("\t\tIEEE754-2008 FMA\n");
+    }
+    if (sp & CL_FP_CORRECTLY_ROUNDED_DIVIDE_SQRT) {
+        printf("\t\tdivide and sqrt are correctly rounded\n");
+    }
+    if (sp & CL_FP_SOFT_FLOAT) {
+        printf("\t\tbasic floating ops implemented in software\n");
+    }
+
+
+    clGetDeviceInfo(id, CL_DEVICE_DOUBLE_FP_CONFIG, sizeof(dp), &dp, NULL);
+    printf("\tdouble precision capabilities:\n");
+    if (dp & CL_FP_DENORM) {
+        printf("\t\tdenormalized\n");
+    }
+    if (dp & CL_FP_INF_NAN) {
+        printf("\t\tINF and quiet NaNs\n");
+    }
+    if (dp & CL_FP_ROUND_TO_NEAREST) {
+        printf("\t\tround to nearest even\n");
+    }
+    if (dp & CL_FP_ROUND_TO_ZERO) {
+        printf("\t\tround to zero\n");
+    }
+    if (dp & CL_FP_ROUND_TO_INF) {
+        printf("\t\tround to infinity\n");
+    }
+    if (dp & CL_FP_FMA) {
+        printf("\t\tIEEE754-2008 FMA\n");
+    }
+    if (dp & CL_FP_SOFT_FLOAT) {
+        printf("\t\tbasic floating ops implemented in software\n");
+    }
 
 }
 
@@ -263,7 +318,8 @@ struct __int_cl_context * __cl_get_global_context() {
 
 
 int __int_cl_load_op(operation_t op_idx, const char * program_name,
-        const char * kernel_name, struct __int_cl_context * ctxt) {
+        const char * kernel_name, const char * opts,
+        struct __int_cl_context * ctxt) {
 
     struct __int_op * op = &ctxt->ops[op_idx];
 
@@ -391,7 +447,9 @@ int cl_execute_op(operation_t op_idx, size_t global_size) {
         fprintf(stderr, "failed to enqueue kernel: ");
         switch (err) {
             case CL_INVALID_PROGRAM_EXECUTABLE:
-                fprintf(stderr, "no executable has been built in the program object for the device associated with the command queue\n");
+                fprintf(stderr, "no executable has been built in the program "
+                        "object for the device associated with the command "
+                        "queue\n");
                 break;
             case CL_INVALID_COMMAND_QUEUE:
                 fprintf(stderr, "the command queue is not valid\n");
@@ -400,7 +458,8 @@ int cl_execute_op(operation_t op_idx, size_t global_size) {
                 fprintf(stderr, "the kernel object is not valid\n");
                 break;
             case CL_INVALID_CONTEXT:
-                fprintf(stderr, "the command queue and kernel are not associated with the same context\n");
+                fprintf(stderr, "the command queue and kernel are not "
+                        "associated with the same context\n");
                 break;
             case CL_INVALID_KERNEL_ARGS:
                 fprintf(stderr, "kernel arguments have not been set\n");
@@ -409,32 +468,42 @@ int cl_execute_op(operation_t op_idx, size_t global_size) {
                 fprintf(stderr, "the dimension is not between 1 and 3\n");
                 break;
             case CL_INVALID_GLOBAL_WORK_SIZE:
-                fprintf(stderr, "the global work size is NULL or exceeds the range supported by the compute device\n");
+                fprintf(stderr, "the global work size is NULL or exceeds the "
+                        "range supported by the compute device\n");
                 break;
             case CL_INVALID_WORK_GROUP_SIZE:
-                fprintf(stderr, "the local work size is not evenly divisible with the global work size or the value specified exceeds "
-                        "the range supported by the compute device\n");
+                fprintf(stderr, "the local work size is not evenly divisible "
+                        "with the global work size or the value specified "
+                        "exceeds the range supported by the compute device\n");
                 break;
             case CL_INVALID_WORK_ITEM_SIZE:
-                fprintf(stderr, "the number of work-items specified in any of local_work_size[0], ... local_work_size[work_dim - 1] "
-                        "is greater than the corresponding values specified by CL_DEVICE_MAX_WORK_ITEM_SIZES[0], ..., "
+                fprintf(stderr, "the number of work-items specified in any of "
+                        "local_work_size[0], ... local_work_size[work_dim - 1] "
+                        "is greater than the corresponding values specified by "
+                        "CL_DEVICE_MAX_WORK_ITEM_SIZES[0], ..., "
                         "CL_DEVICE_MAX_WORK_ITEM_SIZES[work_dim - 1]\n");
                 break;
             case CL_INVALID_GLOBAL_OFFSET:
-                fprintf(stderr, "the reserved global offset parameter is not set to NULL");
+                fprintf(stderr, "the reserved global offset parameter is not "
+                        "set to NULL");
                 break;
             case CL_INVALID_EVENT_WAIT_LIST:
-                fprintf(stderr, "the events list is empty (NULL) but the number of events is greater than 0; or number of events is 0 "
-                        "but the event list is not NULL; or the events list contains invalid event objects\n");
+                fprintf(stderr, "the events list is empty (NULL) but the "
+                        "number of events is greater than 0; or number of "
+                        "events is 0 but the event list is not NULL; or the "
+                        "events list contains invalid event objects\n");
                 break;
             case CL_OUT_OF_HOST_MEMORY:
-                fprintf(stderr, "the host is unable to allocate OpenCL resources\n");
+                fprintf(stderr, "the host is unable to allocate OpenCL "
+                        "resources\n");
                 break;
             case CL_OUT_OF_RESOURCES:
-                fprintf(stderr, "insufficient resources to execute the kernel\n");
+                fprintf(stderr, "insufficient resources to execute the "
+                        "kernel\n");
                 break;
             case CL_MEM_OBJECT_ALLOCATION_FAILURE:
-                fprintf(stderr, "there was a failure to allocate memory for data store associated with image or buffer objects "
+                fprintf(stderr, "there was a failure to allocate memory for "
+                        "data store associated with image or buffer objects "
                         "specified as arguments to the kernel\n");
                 break;
         }
@@ -444,4 +513,13 @@ int cl_execute_op(operation_t op_idx, size_t global_size) {
     return 0;
 }
 
+
+void cl_finish() {
+    struct __int_cl_context * global_context;
+
+    global_context = __cl_get_global_context();
+
+    clFlush(global_context->command_queue);
+    clFinish(global_context->command_queue);
+}
 
