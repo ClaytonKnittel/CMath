@@ -33,11 +33,11 @@ void _fmat_mul_gpu(cl_mem dst, cl_mem m1, cl_mem m2, size_t m1_h, size_t m1_w,
 
     size_t g_sizes[2] = {
         m1_h,
-        m2_w
+        m2_w / 16
     };
 
     size_t l_sizes[2] = {
-        1, 1
+        64, 1
     };
 
     cl_execute_op(fmat_mul, 2, g_sizes, l_sizes);

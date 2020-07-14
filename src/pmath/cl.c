@@ -338,14 +338,21 @@ int __int_cl_load_op(operation_t op_idx, const char * program_name,
         err = clBuildProgram(op->prog, 1, ctxt->device_list, opts, NULL, NULL);
 
         if (err != CL_SUCCESS) {
-            char buf[4096];
+            char * buf;
             size_t len;
 
             clGetProgramBuildInfo(op->prog, ctxt->device_list[0],
-                    CL_PROGRAM_BUILD_LOG, sizeof(buf), buf, &len);
+                    CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
+
+            buf = (char *) malloc(len * sizeof(char));
+
+            clGetProgramBuildInfo(op->prog, ctxt->device_list[0],
+                    CL_PROGRAM_BUILD_LOG, len, buf, NULL);
 
             fprintf(stderr, "Error building program \"%s\", reason: %s\n",
                     program_name, buf);
+
+            free(buf);
             return err;
         }
 

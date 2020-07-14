@@ -1,5 +1,6 @@
 
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -32,7 +33,7 @@ int main(int argc, char *argv[]) {
     int opt;
     char * buf;
 
-    ssize_t m1_h = 1, m1_w = 1, m2_w = 1;
+    ssize_t m1_h = -1, m1_w = -1, m2_w = -1;
 
     while ((opt = getopt(argc, argv, "cpi:j:k:")) != -1) {
         switch (opt) {
@@ -75,7 +76,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (0 && (m1_h == -1 || m1_w == -1 || m2_w == -1)) {
+    if (m1_h == -1 || m1_w == -1 || m2_w == -1) {
         fprintf(stderr, "All three dimensions (i, j, k) must be specified\n"
                 "The multiplication is: A (i x k) * B (k * j) = C (i * j)\n");
         return -1;
@@ -83,35 +84,22 @@ int main(int argc, char *argv[]) {
 
     _load_fmat_mul();
 
-    unsigned char bbuf[4096];
-    size_t write_size;
-
-    cl_get_op_binary(fmat_mul, bbuf, 4096, &write_size);
-
-    int fd = open("test.s", O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
-    if (fd == -1) {
-        return -1;
-    }
-
-    write(fd, bbuf, write_size);
-    close(fd);
-
-    return 0;
-
     float * a = (float *) malloc(m1_h * m1_w * sizeof(float));
     float * b = (float *) malloc(m1_w * m2_w * sizeof(float));
     float * c = (float *) malloc(m1_h * m2_w * sizeof(float));
     float * test;
-   
+
     if (check) {
         test = (float *) malloc(m1_h * m2_w * sizeof(float));
     }
 
+#define RANGE 2
+
     for (int i = 0; i < m1_h * m1_w; i++) {
-        a[i] = rand() / (RAND_MAX / 10.f);
+        a[i] = floor(rand() / (RAND_MAX / ((float) RANGE)));
     }
     for (int i = 0; i < m1_w * m2_w; i++) {
-        b[i] = rand() / (RAND_MAX / 10.f);
+        b[i] = floor(rand() / (RAND_MAX / ((float) RANGE)));
     }
 
 
@@ -133,7 +121,7 @@ int main(int argc, char *argv[]) {
         printf("GPU:\n");
         for (int i = 0; i < m1_h; i++) {
             for (int j = 0; j < m2_w; j++) {
-                printf("%9.3f  ", c[i * m2_w + j]);
+                printf("%3.0f", c[i * m2_w + j]);
             }
             printf("\n");
         }
@@ -142,7 +130,7 @@ int main(int argc, char *argv[]) {
             printf("CPU:\n");
             for (int i = 0; i < m1_h; i++) {
                 for (int j = 0; j < m2_w; j++) {
-                    printf("%9.3f  ", test[i * m2_w + j]);
+                    printf("%3.0f", test[i * m2_w + j]);
                 }
                 printf("\n");
             }
