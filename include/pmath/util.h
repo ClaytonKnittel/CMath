@@ -8,6 +8,12 @@
 #define P_FILE_LINE P_LGREEN __FILE__ P_DEFAULT ":" P_LCYAN "%d" P_DEFAULT
 
 
+#define IS_ALIGNED(ptr, alignment) ((((size_t) (ptr)) & ((alignment) - 1)) == 0)
+
+#define _STR(expr) #expr
+#define STR(expr) _STR(expr)
+
+
 #define MATH_ASSERT(expr) \
     do { \
         if (__builtin_expect(!(expr), 0)) { \

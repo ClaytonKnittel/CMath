@@ -297,9 +297,9 @@ static int _cl_init(struct __int_cl_context * c) {
     c->flags = INITIALIZED;
     __builtin_memset(c->ops, 0, n_operations * sizeof(struct __int_op));
 
-    for (int i = 0; i < num_devices; i++) {
+    /*for (int i = 0; i < num_devices; i++) {
         print_device_info(device_list[i]);
-    }
+    }*/
 
     return 0;
 }
@@ -335,7 +335,7 @@ int __int_cl_load_op(operation_t op_idx, const char * program_name,
             return err;
         }
 
-        err = clBuildProgram(op->prog, 1, ctxt->device_list, NULL, NULL, NULL);
+        err = clBuildProgram(op->prog, 1, ctxt->device_list, opts, NULL, NULL);
 
         if (err != CL_SUCCESS) {
             char buf[4096];
@@ -363,6 +363,39 @@ int __int_cl_load_op(operation_t op_idx, const char * program_name,
 
     // if op was already initialized, don't need to do anything
     return 0;
+}
+
+
+void cl_get_op_binary(operation_t op_idx, unsigned char * buf, size_t buf_len,
+        size_t * write_size) {
+    struct __int_cl_context * global_context;
+    struct __int_op * op;
+
+    global_context = __cl_get_global_context();
+    op = &global_context->ops[op_idx];
+
+    size_t sizes[2];
+    cl_int err = clGetProgramInfo(op->prog, CL_PROGRAM_BINARY_SIZES,
+            2 * sizeof(size_t), sizes, NULL);
+
+    if (buf_len < sizes[0]) {
+        fprintf(stderr, "Buffer length %zu too short for binary size %zu\n",
+                buf_len, sizes[0]);
+        return;
+    }
+
+    unsigned char * bufs[2] = {
+        buf, NULL
+    };
+
+    *write_size = sizes[0];
+
+    err = clGetProgramInfo(op->prog, CL_PROGRAM_BINARIES,
+            2 * sizeof(unsigned char *), bufs, NULL);
+
+    if (err) {
+        fprintf(stderr, "Failed to get binaries for op %d\n", op_idx);
+    }
 }
 
 
@@ -429,7 +462,77 @@ void cl_set_param(operation_t op_idx, uint32_t param_idx, size_t arg_size,
 }
 
 
-int cl_execute_op(operation_t op_idx, size_t global_size) {
+
+static void _cl_print_execute_op_err(cl_int err) {
+    fprintf(stderr, "failed to enqueue kernel: ");
+    switch (err) {
+        case CL_INVALID_PROGRAM_EXECUTABLE:
+            fprintf(stderr, "no executable has been built in the program "
+                    "object for the device associated with the command "
+                    "queue\n");
+            break;
+        case CL_INVALID_COMMAND_QUEUE:
+            fprintf(stderr, "the command queue is not valid\n");
+            break;
+        case CL_INVALID_KERNEL:
+            fprintf(stderr, "the kernel object is not valid\n");
+            break;
+        case CL_INVALID_CONTEXT:
+            fprintf(stderr, "the command queue and kernel are not "
+                    "associated with the same context\n");
+            break;
+        case CL_INVALID_KERNEL_ARGS:
+            fprintf(stderr, "kernel arguments have not been set\n");
+            break;
+        case CL_INVALID_WORK_DIMENSION:
+            fprintf(stderr, "the dimension is not between 1 and 3\n");
+            break;
+        case CL_INVALID_GLOBAL_WORK_SIZE:
+            fprintf(stderr, "the global work size is NULL or exceeds the "
+                    "range supported by the compute device\n");
+            break;
+        case CL_INVALID_WORK_GROUP_SIZE:
+            fprintf(stderr, "the local work size is not evenly divisible "
+                    "with the global work size or the value specified "
+                    "exceeds the range supported by the compute device\n");
+            break;
+        case CL_INVALID_WORK_ITEM_SIZE:
+            fprintf(stderr, "the number of work-items specified in any of "
+                    "local_work_size[0], ... local_work_size[work_dim - 1] "
+                    "is greater than the corresponding values specified by "
+                    "CL_DEVICE_MAX_WORK_ITEM_SIZES[0], ..., "
+                    "CL_DEVICE_MAX_WORK_ITEM_SIZES[work_dim - 1]\n");
+            break;
+        case CL_INVALID_GLOBAL_OFFSET:
+            fprintf(stderr, "the reserved global offset parameter is not "
+                    "set to NULL");
+            break;
+        case CL_INVALID_EVENT_WAIT_LIST:
+            fprintf(stderr, "the events list is empty (NULL) but the "
+                    "number of events is greater than 0; or number of "
+                    "events is 0 but the event list is not NULL; or the "
+                    "events list contains invalid event objects\n");
+            break;
+        case CL_OUT_OF_HOST_MEMORY:
+            fprintf(stderr, "the host is unable to allocate OpenCL "
+                    "resources\n");
+            break;
+        case CL_OUT_OF_RESOURCES:
+            fprintf(stderr, "insufficient resources to execute the "
+                    "kernel\n");
+            break;
+        case CL_MEM_OBJECT_ALLOCATION_FAILURE:
+            fprintf(stderr, "there was a failure to allocate memory for "
+                    "data store associated with image or buffer objects "
+                    "specified as arguments to the kernel\n");
+            break;
+    }
+}
+
+
+int cl_execute_op(operation_t op_idx, uint32_t n_dims, size_t * global_sizes,
+        size_t * local_sizes) {
+
     struct __int_cl_context * global_context;
     struct __int_op * op;
     cl_int err;
@@ -439,74 +542,12 @@ int cl_execute_op(operation_t op_idx, size_t global_size) {
     op = &global_context->ops[op_idx];
 
     err = clEnqueueNDRangeKernel(global_context->command_queue, op->kernel,
-            1, NULL, &global_size, NULL,
+            n_dims, NULL, global_sizes, local_sizes,
             0, NULL,
             &event);
 
     if (err != CL_SUCCESS) {
-        fprintf(stderr, "failed to enqueue kernel: ");
-        switch (err) {
-            case CL_INVALID_PROGRAM_EXECUTABLE:
-                fprintf(stderr, "no executable has been built in the program "
-                        "object for the device associated with the command "
-                        "queue\n");
-                break;
-            case CL_INVALID_COMMAND_QUEUE:
-                fprintf(stderr, "the command queue is not valid\n");
-                break;
-            case CL_INVALID_KERNEL:
-                fprintf(stderr, "the kernel object is not valid\n");
-                break;
-            case CL_INVALID_CONTEXT:
-                fprintf(stderr, "the command queue and kernel are not "
-                        "associated with the same context\n");
-                break;
-            case CL_INVALID_KERNEL_ARGS:
-                fprintf(stderr, "kernel arguments have not been set\n");
-                break;
-            case CL_INVALID_WORK_DIMENSION:
-                fprintf(stderr, "the dimension is not between 1 and 3\n");
-                break;
-            case CL_INVALID_GLOBAL_WORK_SIZE:
-                fprintf(stderr, "the global work size is NULL or exceeds the "
-                        "range supported by the compute device\n");
-                break;
-            case CL_INVALID_WORK_GROUP_SIZE:
-                fprintf(stderr, "the local work size is not evenly divisible "
-                        "with the global work size or the value specified "
-                        "exceeds the range supported by the compute device\n");
-                break;
-            case CL_INVALID_WORK_ITEM_SIZE:
-                fprintf(stderr, "the number of work-items specified in any of "
-                        "local_work_size[0], ... local_work_size[work_dim - 1] "
-                        "is greater than the corresponding values specified by "
-                        "CL_DEVICE_MAX_WORK_ITEM_SIZES[0], ..., "
-                        "CL_DEVICE_MAX_WORK_ITEM_SIZES[work_dim - 1]\n");
-                break;
-            case CL_INVALID_GLOBAL_OFFSET:
-                fprintf(stderr, "the reserved global offset parameter is not "
-                        "set to NULL");
-                break;
-            case CL_INVALID_EVENT_WAIT_LIST:
-                fprintf(stderr, "the events list is empty (NULL) but the "
-                        "number of events is greater than 0; or number of "
-                        "events is 0 but the event list is not NULL; or the "
-                        "events list contains invalid event objects\n");
-                break;
-            case CL_OUT_OF_HOST_MEMORY:
-                fprintf(stderr, "the host is unable to allocate OpenCL "
-                        "resources\n");
-                break;
-            case CL_OUT_OF_RESOURCES:
-                fprintf(stderr, "insufficient resources to execute the "
-                        "kernel\n");
-                break;
-            case CL_MEM_OBJECT_ALLOCATION_FAILURE:
-                fprintf(stderr, "there was a failure to allocate memory for "
-                        "data store associated with image or buffer objects "
-                        "specified as arguments to the kernel\n");
-                break;
-        }
+        _cl_print_execute_op_err(err);
         return err;
     }
 

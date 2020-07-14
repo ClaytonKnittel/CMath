@@ -11,6 +11,7 @@
 typedef enum operation {
     vec_add,
     fvec_add,
+    fmat_mul,
     n_operations
 } operation_t;
 
@@ -52,6 +53,13 @@ static __attribute__((always_inline)) int cl_load_op(operation_t op,
 
 
 /*
+ * decompiles operation source code binary and puts it in buf
+ */
+void cl_get_op_binary(operation_t op, unsigned char * buf, size_t buf_len,
+        size_t * write_size);
+
+
+/*
  * alias for clCreateBuffer
  */
 cl_mem cl_create_buffer(int flags, size_t n_bytes, void * ptr);
@@ -76,7 +84,8 @@ void cl_set_param(operation_t op, uint32_t param_idx, size_t arg_size,
         const void * arg);
 
 
-int cl_execute_op(operation_t op, size_t global_size);
+int cl_execute_op(operation_t op_idx, uint32_t n_dims, size_t * global_sizes,
+        size_t * local_sizes);
 
 
 void cl_finish();

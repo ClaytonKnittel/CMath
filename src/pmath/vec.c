@@ -16,7 +16,10 @@
 #define LOG_PS_PER_REG 3
 
 #define ADD_BASE_LEN 0x10000
-#define FADD_BASE_LEN 0x58000
+#define FADD_BASE_LEN 0x580000
+
+
+#define GROUP_SIZE 4
 
 
 /*
@@ -70,11 +73,13 @@ static void _vec_add_base(double * dst, double * restrict v1,
 
 
 void _vec_add_gpu(cl_mem dst, cl_mem v1, cl_mem v2, size_t len) {
+    assert(IS_ALIGNED(len, GROUP_SIZE));
+
     cl_set_param(vec_add, 0, sizeof(dst), &dst);
     cl_set_param(vec_add, 1, sizeof(v1),  &v1);
     cl_set_param(vec_add, 2, sizeof(v2),  &v2);
 
-    cl_execute_op(vec_add, len / 16);
+    cl_execute_op(vec_add, 1, &len, NULL);
 }
 
 
@@ -205,11 +210,15 @@ static void _fvec_add_base(float * dst, float * restrict v1,
 
 
 void _fvec_add_gpu(cl_mem dst, cl_mem v1, cl_mem v2, size_t len) {
+    MATH_ASSERT((len & 0xf) == 0);
+
     cl_set_param(fvec_add, 0, sizeof(dst), &dst);
     cl_set_param(fvec_add, 1, sizeof(v1),  &v1);
     cl_set_param(fvec_add, 2, sizeof(v2),  &v2);
 
-    cl_execute_op(fvec_add, len);
+    size_t g_size = len / GROUP_SIZE;
+
+    cl_execute_op(fvec_add, 1, &g_size, NULL);
 }
 
 
@@ -257,6 +266,6 @@ void _fvec_add(float * dst, float * restrict v1, float * restrict v2,
 void _load_fvec_add() {
     cl_load_op(fvec_add, "kernels/fvec_add.cl", "fvec_add",
             "-cl-std=CL1.2 -Werror -cl-no-signed-zeros "
-            "-cl-uniform-work-group-size");
+            "-D GROUP_SIZE=" STR(GROUP_SIZE));
 }
 
