@@ -118,6 +118,13 @@ int main(int argc, char *argv[]) {
     }
 
     if (print) {
+        for (int i = 0; i < m1_h; i++) {
+            for (int j = 0; j < m1_w; j++) {
+                printf("%3.0f", b[i * m1_w + j]);
+            }
+            printf("\n");
+        }
+
         printf("GPU:\n");
         for (int i = 0; i < m1_h; i++) {
             for (int j = 0; j < m2_w; j++) {
