@@ -11,7 +11,6 @@
 #include "util.h"
 
 
-
 static void fmat_mul_test(float * dst, float * m1, float * m2, size_t m1_h,
         size_t m1_w, size_t m2_w) {
 
@@ -20,6 +19,31 @@ static void fmat_mul_test(float * dst, float * m1, float * m2, size_t m1_h,
             dst[i * m2_w + j] = 0;
             for (int k = 0; k < m1_w; k++) {
                 dst[i * m2_w + j] += m1[i * m1_w + k] * m2[k * m2_w + j];
+            }
+        }
+    }
+}
+
+
+#define BLOCK_SIZE 16
+static void fast_fmat_mul_test(float * dst, float * m1, float * m2, size_t m1_h,
+        size_t m1_w, size_t m2_w) {
+
+    for (size_t _i = 0; _i < m1_h; _i += BLOCK_SIZE) {
+        for (size_t _j = 0; _j < m2_w; _j += BLOCK_SIZE) {
+            for (size_t i = _i; i < _i + BLOCK_SIZE; i++) {
+                for (size_t j = _j; j < _j + BLOCK_SIZE; j++) {
+                    dst[i * m2_w + j] = 0;
+                }
+            }
+            for (size_t _k = 0; _k < m1_w; _k += BLOCK_SIZE) {
+                for (size_t i = _i; i < _i + BLOCK_SIZE; i++) {
+                    for (size_t j = _j; j < _j + BLOCK_SIZE; j++) {
+                        for (int k = _k; k < _k + BLOCK_SIZE; k++) {
+                            dst[i * m2_w + j] += m1[i * m1_w + k] * m2[k * m2_w + j];
+                        }
+                    }
+                }
             }
         }
     }
@@ -111,7 +135,7 @@ int main(int argc, char *argv[]) {
 
     if (check) {
         start_timing(&t);
-        fmat_mul_test(test, a, b, m1_h, m1_w, m2_w);
+        fast_fmat_mul_test(test, a, b, m1_h, m1_w, m2_w);
         end_timing(&t);
 
         printf("Total CPU time: %lf\n", get_time(&t));
