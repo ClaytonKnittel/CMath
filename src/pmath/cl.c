@@ -8,7 +8,9 @@
 
 
 
-#define USE_DEVICE 2
+#define DEVICE_CATEGORY CL_DEVICE_TYPE_GPU
+
+#define USE_DEVICE 0
 
 
 // universal flag
@@ -69,10 +71,10 @@ static int _cl_init(struct __int_cl_context * c) {
     cl_uint num_devices;
     cl_device_id * device_ids = NULL;
 
-    err = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_ALL, 0, NULL, &num_devices);
+    err = clGetDeviceIDs(platforms[0], DEVICE_CATEGORY, 0, NULL, &num_devices);
     device_ids = (cl_device_id *)
         malloc(sizeof(cl_device_id)*num_devices);
-    err = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_ALL, num_devices,
+    err = clGetDeviceIDs(platforms[0], DEVICE_CATEGORY, num_devices,
             device_ids, NULL);
 
 
@@ -115,7 +117,11 @@ static int _cl_init(struct __int_cl_context * c) {
                 device_ids[device_n], 0, &err);
 
         if (err != CL_SUCCESS) {
-            fprintf(stderr, "failed to create command queue");
+            fprintf(stderr, "failed to create command queue: ");
+
+            if (err == CL_INVALID_VALUE) {
+                fprintf(stderr, "invalid value\n");
+            }
             clReleaseContext(context);
             free(command_queues);
             free(device_ids);
@@ -133,9 +139,9 @@ static int _cl_init(struct __int_cl_context * c) {
     c->flags = INITIALIZED;
     __builtin_memset(c->ops, 0, n_operations * sizeof(struct __int_op));
 
-    for (int i = 0; i < num_devices; i++) {
+    /*for (int i = 0; i < num_devices; i++) {
         cl_print_device_info(device_ids[i]);
-    }
+    }*/
 
     return 0;
 }

@@ -2,3 +2,4 @@ bin
 *.[od]
 lib
 *.swp
+cmt
