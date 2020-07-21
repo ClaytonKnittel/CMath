@@ -1,6 +1,11 @@
 
 #include <pmath/mat.h>
+#include <pmath/util.h>
 #include <pmath/vec.h>
+
+
+#define BLOCK_H 32
+#define BLOCK_W 16
 
 
 
@@ -33,11 +38,11 @@ void _fmat_mul_gpu(cl_mem dst, cl_mem m1, cl_mem m2, size_t m1_h, size_t m1_w,
 
     size_t g_sizes[2] = {
         m1_h,
-        m2_w / 16
+        m2_w / BLOCK_W
     };
 
     size_t l_sizes[2] = {
-        64, 1
+        BLOCK_H, 1
     };
 
     cl_execute_op(fmat_mul, 2, g_sizes, l_sizes);
@@ -68,7 +73,8 @@ void _fmat_mul(float * dst, float * m1, float * m2, size_t m1_h, size_t m1_w,
 
 void _load_fmat_mul() {
     cl_load_op(fmat_mul, "kernels/fmat_mul.cl", "fmat_mul",
-            "-cl-std=CL1.2 -Werror -cl-no-signed-zeros");
+            "-cl-std=CL1.2 -Werror -cl-no-signed-zeros "
+            "-D GROUP_HEIGHT=" STR(BLOCK_H) " -D GROUP_STRIDE=" STR(BLOCK_W));
 }
 
 

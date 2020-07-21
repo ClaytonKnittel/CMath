@@ -27,6 +27,12 @@ struct __int_cl_context;
 struct __int_cl_context * __cl_get_global_context();
 
 
+/*
+ * print a lot of info about the given device
+ */
+void cl_print_device_info(cl_device_id id);
+
+
 int __int_cl_load_op(operation_t op, const char * program_name,
         const char * kernel_name, const char * opts,
         struct __int_cl_context * ctxt);

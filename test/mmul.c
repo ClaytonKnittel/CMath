@@ -1,8 +1,11 @@
 
 #include <assert.h>
+#include <errno.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include <pmath/cl.h>
 #include <pmath/mat.h>
@@ -47,6 +50,52 @@ static void fast_fmat_mul_test(float * dst, float * m1, float * m2, size_t m1_h,
             }
         }
     }
+}
+
+
+int run_subp(const unsigned char * buf, size_t buf_len) {
+    FILE * file;
+    file = fopen("test.krn", "w");
+
+    fwrite(buf, 1, buf_len, file);
+
+    fclose(file);
+
+    pid_t child;
+
+    if ((child = fork()) == 0) {
+        dup(STDOUT_FILENO);
+        dup(STDERR_FILENO);
+
+        freopen("/dev/null", "w", stdout);
+        freopen("/dev/null", "w", stderr);
+        fclose(stdout);
+        fclose(stderr);
+
+        // child
+        char * const args[] = {
+            "-d",
+            "test.krn",
+            "-p=9",
+            NULL
+        };
+        execve("profilers/iga64", args, NULL);
+
+        printf("error: %s\n", strerror(errno));
+
+        exit(-2);
+    }
+    else {
+        int ret_stat;
+        waitpid(child, &ret_stat, 0);
+
+        if (WIFSIGNALED(ret_stat)) {
+            return -1;
+        }
+
+        return WEXITSTATUS(ret_stat);
+    }
+
 }
 
 
@@ -107,6 +156,32 @@ int main(int argc, char *argv[]) {
     }
 
     _load_fmat_mul();
+
+    /*size_t siz;
+    unsigned char buf2[16678];
+
+    cl_get_op_binary(fmat_mul, buf2, sizeof(buf2), &siz);
+
+    FILE * f = fopen("test2.krn", "w");
+
+    fwrite(buf2, 1, siz, f);
+
+    fclose(f);*/
+
+    /*
+
+#define START 0
+    for (int i = 0; i < sizeof(buf2); i++) {
+        if (i % 100 == 0) {
+            printf("i = %d\n", i);
+        }
+        int ret = run_subp(buf2 + i, siz - i);
+        if (ret == 0) {
+            printf("worked on %d (%d)\n", i, ret);
+        }
+    }*/
+
+    //return 0;
 
     float * a = (float *) malloc(m1_h * m1_w * sizeof(float));
     float * b = (float *) malloc(m1_w * m2_w * sizeof(float));

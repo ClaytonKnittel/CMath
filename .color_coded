@@ -1,0 +1,13 @@
+-O3
+-g
+-Wall
+-Wno-unused-function
+-MMD
+-MP
+-mavx
+-DCL_SILENCE_DEPRECATION
+-I/Users/claytonknittel/VSCode/math/include
+-flto
+-L/Users/claytonknittel/VSCode/math/lib
+-framework OpenCL
+-lutil
