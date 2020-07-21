@@ -9,6 +9,7 @@
 
 #include <pmath/cl.h>
 #include <pmath/mat.h>
+#include <pmath/print_colors.h>
 
 #include "timing.h"
 #include "util.h"
@@ -227,7 +228,13 @@ int main(int argc, char *argv[]) {
         printf("GPU:\n");
         for (int i = 0; i < m1_h; i++) {
             for (int j = 0; j < m2_w; j++) {
+                if (check && c[i * m2_w + j] != test[i * m2_w + j]) {
+                    printf(P_RED);
+                }
                 printf("%3.0f", c[i * m2_w + j]);
+                if (check && c[i * m2_w + j] != test[i * m2_w + j]) {
+                    printf(P_DEFAULT);
+                }
             }
             printf("\n");
         }
