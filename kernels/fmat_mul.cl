@@ -65,8 +65,8 @@ __kernel void fmat_mul(__global float * dst, __global float * m1,
     // clear accumulation registers
     dst_regs = 0.f;
 
-    m1  = m1 + (r * m1_w);
-    m2  = m2 + c;
+    m1 += (r * m1_w);
+    m2 += c;
 
     while (((ulong) m2) < ((ulong) m2_end)) {
         // copy a 16x16 block from m2 into the local "cache"
@@ -95,21 +95,21 @@ __kernel void fmat_mul(__global float * dst, __global float * m1,
         }*/
 
         // explicit loop unroll
-        dst_regs += (m1_buf.s0 * ((__local m2_block_row_t *) m2_buf)[ 0]);
-                  + (m1_buf.s1 * ((__local m2_block_row_t *) m2_buf)[ 1]);
-                  + (m1_buf.s2 * ((__local m2_block_row_t *) m2_buf)[ 2]);
-                  + (m1_buf.s3 * ((__local m2_block_row_t *) m2_buf)[ 3]);
-                  + (m1_buf.s4 * ((__local m2_block_row_t *) m2_buf)[ 4]);
-                  + (m1_buf.s5 * ((__local m2_block_row_t *) m2_buf)[ 5]);
-                  + (m1_buf.s6 * ((__local m2_block_row_t *) m2_buf)[ 6]);
-                  + (m1_buf.s7 * ((__local m2_block_row_t *) m2_buf)[ 7]);
-                  + (m1_buf.s8 * ((__local m2_block_row_t *) m2_buf)[ 8]);
-                  + (m1_buf.s9 * ((__local m2_block_row_t *) m2_buf)[ 9]);
-                  + (m1_buf.sa * ((__local m2_block_row_t *) m2_buf)[10]);
-                  + (m1_buf.sb * ((__local m2_block_row_t *) m2_buf)[11]);
-                  + (m1_buf.sc * ((__local m2_block_row_t *) m2_buf)[12]);
-                  + (m1_buf.sd * ((__local m2_block_row_t *) m2_buf)[13]);
-                  + (m1_buf.se * ((__local m2_block_row_t *) m2_buf)[14]);
+        dst_regs += (m1_buf.s0 * ((__local m2_block_row_t *) m2_buf)[ 0])
+                  + (m1_buf.s1 * ((__local m2_block_row_t *) m2_buf)[ 1])
+                  + (m1_buf.s2 * ((__local m2_block_row_t *) m2_buf)[ 2])
+                  + (m1_buf.s3 * ((__local m2_block_row_t *) m2_buf)[ 3])
+                  + (m1_buf.s4 * ((__local m2_block_row_t *) m2_buf)[ 4])
+                  + (m1_buf.s5 * ((__local m2_block_row_t *) m2_buf)[ 5])
+                  + (m1_buf.s6 * ((__local m2_block_row_t *) m2_buf)[ 6])
+                  + (m1_buf.s7 * ((__local m2_block_row_t *) m2_buf)[ 7])
+                  + (m1_buf.s8 * ((__local m2_block_row_t *) m2_buf)[ 8])
+                  + (m1_buf.s9 * ((__local m2_block_row_t *) m2_buf)[ 9])
+                  + (m1_buf.sa * ((__local m2_block_row_t *) m2_buf)[10])
+                  + (m1_buf.sb * ((__local m2_block_row_t *) m2_buf)[11])
+                  + (m1_buf.sc * ((__local m2_block_row_t *) m2_buf)[12])
+                  + (m1_buf.sd * ((__local m2_block_row_t *) m2_buf)[13])
+                  + (m1_buf.se * ((__local m2_block_row_t *) m2_buf)[14])
                   + (m1_buf.sf * ((__local m2_block_row_t *) m2_buf)[15]);
 
         m1 += M2_BUF_HEIGHT;

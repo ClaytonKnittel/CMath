@@ -5,6 +5,7 @@
 
 
 #include <pmath/cl.h>
+#include <pmath/print_colors.h>
 
 
 
@@ -193,7 +194,7 @@ int __int_cl_load_op(operation_t op_idx, const char * program_name,
                 clGetProgramBuildInfo(op->prog, ctxt->device_ids[device_n],
                         CL_PROGRAM_BUILD_LOG, len, buf, NULL);
 
-                fprintf(stderr, "Error building program \"%s\", reason: %s\n",
+                fprintf(stderr, "Error building program \"%s\", reason:\n%s\n",
                         program_name, buf);
 
                 free(buf);
@@ -296,6 +297,10 @@ void cl_read_buffer(cl_mem cl_buf, size_t offset, size_t n_bytes, void * dst) {
             offset, n_bytes, dst,
             0, NULL,
             &event);
+
+    if (err != CL_SUCCESS) {
+        fprintf(stderr, "read buffer didn't work\n");
+    }
 }
 
 void cl_delete_buffer(cl_mem buf) {
@@ -317,7 +322,7 @@ void cl_set_param(operation_t op_idx, uint32_t param_idx, size_t arg_size,
 
 
 static void _cl_print_execute_op_err(cl_int err) {
-    fprintf(stderr, "failed to enqueue kernel: ");
+    fprintf(stderr, P_RED "failed to enqueue kernel: ");
     switch (err) {
         case CL_INVALID_PROGRAM_EXECUTABLE:
             fprintf(stderr, "no executable has been built in the program "
@@ -380,6 +385,7 @@ static void _cl_print_execute_op_err(cl_int err) {
                     "specified as arguments to the kernel\n");
             break;
     }
+    fprintf(stderr, P_DEFAULT);
 }
 
 
