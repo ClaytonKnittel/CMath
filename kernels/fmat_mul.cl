@@ -48,11 +48,9 @@ __kernel void fmat_mul(__global float * dst, __global float * m1,
     __private m2_block_row_t m1_buf;
     __local float m2_buf[M2_BUF_HEIGHT * M2_BUF_WIDTH];
 
-    //uint g_r = get_group_id(0) * GROUP_HEIGHT;
-    uint g_c = get_group_id(1) * GROUP_STRIDE;
-
-    uint r = get_global_id(0);
-#define c g_c
+    // height and width of the matrix
+#define r get_global_id(0)
+#define c (get_group_id(1) * GROUP_STRIDE)
 
     //uint m1_h = get_global_size(0);
     uint m2_w = get_global_size(1) * GROUP_STRIDE;
@@ -60,27 +58,21 @@ __kernel void fmat_mul(__global float * dst, __global float * m1,
 //#define dst_h m1_h
 #define dst_w m2_w
 
-    // pointers to the locations in the given matrices we will be reading
-    // from and writing to
-    __global float * dst_ptr;
-    __global float * m1_ptr;
-    __global float * m2_ptr;
-
-    const __global float * m2_ptr_end = m2 + (m2_w * m2_h);
+    const __global float * m2_end = m2 + (m2_w * m2_h);
 
     event_t copy_ev;
 
     // clear accumulation registers
     dst_regs = 0.f;
 
-    m1_ptr  = m1 + (r * m1_w);
-    m2_ptr  = m2 + c;
+    m1  = m1 + (r * m1_w);
+    m2  = m2 + c;
 
-    while (((ulong) m2_ptr) < ((ulong) m2_ptr_end)) {
+    while (((ulong) m2) < ((ulong) m2_end)) {
         // copy a 16x16 block from m2 into the local "cache"
         copy_ev = async_work_group_strided_copy(
                 (__local  m2_block_row_t *) m2_buf,
-                (__global m2_block_row_t *) m2_ptr,
+                (__global m2_block_row_t *) m2,
                 M2_BUF_HEIGHT,
                 m2_w / M2_BUF_WIDTH,
                 (event_t) 0);
@@ -88,11 +80,11 @@ __kernel void fmat_mul(__global float * dst, __global float * m1,
 
         /*uint idx = r - g_r;
         for (uint offset = 0; offset < M2_BUF_WIDTH; offset++) {
-            m2_buf[idx * M2_BUF_WIDTH + offset] = m2_ptr[idx * m2_w + offset];
+            m2_buf[idx * M2_BUF_WIDTH + offset] = m2[idx * m2_w + offset];
         }
         barrier(CLK_LOCAL_MEM_FENCE);*/
 
-        m1_buf = vload(0, m1_ptr);
+        m1_buf = vload(0, m1);
 
         /*
         #pragma unroll
@@ -120,16 +112,15 @@ __kernel void fmat_mul(__global float * dst, __global float * m1,
                   + (m1_buf.se * ((__local m2_block_row_t *) m2_buf)[14]);
                   + (m1_buf.sf * ((__local m2_block_row_t *) m2_buf)[15]);
 
-        m1_ptr += M2_BUF_HEIGHT;
-        m2_ptr += M2_BUF_HEIGHT * m2_w;
+        m1 += M2_BUF_HEIGHT;
+        m2 += M2_BUF_HEIGHT * m2_w;
 
         // wait for all threads in work group to reach here before looping
         // and writing to m2 again
         barrier(0);
     }
 
-    dst_ptr = dst + (r * dst_w) + c;
-    vstore(dst_regs, 0, dst_ptr);
+    vstore(dst_regs, 0, dst + (r * dst_w) + c);
 
 }
 
