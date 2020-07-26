@@ -29,6 +29,12 @@ static void fmat_mul_test(float * dst, float * m1, float * m2, size_t m1_h,
 }
 
 
+static void sub(float * dst, float * m1, float * m2, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        dst[i] = m1[i] - m2[i];
+    }
+}
+
 #define BLOCK_SIZE 16
 static void fast_fmat_mul_test(float * dst, float * m1, float * m2, size_t m1_h,
         size_t m1_w, size_t m2_w) {
@@ -109,7 +115,7 @@ int main(int argc, char *argv[]) {
 
     ssize_t m1_h = -1, m1_w = -1, m2_w = -1;
 
-    while ((opt = getopt(argc, argv, "cpi:j:k:")) != -1) {
+    while ((opt = getopt(argc, argv, "cpi:j:k:n:")) != -1) {
         switch (opt) {
             case 'c':
                 check = 1;
@@ -141,6 +147,17 @@ int main(int argc, char *argv[]) {
                     return -1;
                 }
                 break;
+            case 'n':
+                m1_h = strtoul(optarg, &buf, 10);
+                if (*optarg == '\0' || *buf != '\0') {
+                    // invalid number
+                    fprintf(stderr, "%s is not a valid base 10 unsigned "
+                            "number\n", optarg);
+                    return -1;
+                }
+                m1_w = m1_h;
+                m2_w = m1_h;
+                break;
             case 'p':
                 print = 1;
                 break;
@@ -156,7 +173,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    _load_fmat_mul();
+    _load_fmat_ops();
 
     /*size_t siz;
     unsigned char buf2[16678];

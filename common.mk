@@ -9,7 +9,7 @@ BIN_DIR=$(BASE_DIR)/bin
 
 IFLAGS=-I$(BASE_DIR)/include
 
-DEBUG=0
+DEBUG=1
 
 ifeq ($(DEBUG), 0)
 CFLAGS=-O3 -g -Wall -Wno-unused-function -MMD -MP -mavx -DCL_SILENCE_DEPRECATION

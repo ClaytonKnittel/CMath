@@ -12,6 +12,8 @@ typedef enum operation {
     vec_add,
     fvec_add,
     fmat_mul,
+    fmat_add,
+    fmat_sub,
     n_operations
 } operation_t;
 

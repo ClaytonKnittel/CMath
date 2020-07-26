@@ -1,3 +1,8 @@
+/*
+ * Algorithm is based on:
+ * https://mc.stanford.edu/cgi-bin/images/6/65/SC08_Volkov_GPU.pdf
+ * https://www.cise.ufl.edu/~sahni/papers/strassen.pdf
+ */
 
 
 /*
@@ -87,7 +92,8 @@ __kernel void fmat_mul(__global float * dst, __global float * m1,
 
         m1_buf = vload(0, m1);
 
-        __private m2_block_row_t r01 =
+#define r01 dst_regs
+                                 r01 +=
             m1_buf.s0 * ((__local m2_block_row_t *) m2_buf)[ 0] +
             m1_buf.s1 * ((__local m2_block_row_t *) m2_buf)[ 1];
         __private m2_block_row_t r23 =
@@ -112,7 +118,7 @@ __kernel void fmat_mul(__global float * dst, __global float * m1,
             m1_buf.se * ((__local m2_block_row_t *) m2_buf)[14] +
             m1_buf.sf * ((__local m2_block_row_t *) m2_buf)[15];
 
-        dst_regs += ((r01 + r23) + (r45 + r67)) + ((r89 + rab) + (rcd + ref));
+        dst_regs = ((r01 + r23) + (r45 + r67)) + ((r89 + rab) + (rcd + ref));
 
 
         m1 += M2_BUF_HEIGHT;
